@@ -46,7 +46,7 @@
 SoftwareSerial mySerial(D5, D6);
 
 //Internals
-bool gbSim = true;
+bool gbSim = false;
 bool gbMaraOff = false;
 bool gbPumpOn = false;
 bool gbCoffeeMode = false;
