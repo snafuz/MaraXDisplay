@@ -1,24 +1,15 @@
 # MaraX Monitior - Visualisation for the Lelit Mara X (V2) with an automatic Shot-Timer
-Hello everyone! This project is for anyone who owns a Lelit Mara X (V2) espresso machine. When looking for a new espresso machine, one feature I always wanted was a shot timer. Usually the machines are beautifully designed so I didn't want to ruin the look by adding a $5 kitchen timer to the machine.
-So far so good. Now you are going to say : Dude the MaraX doesnt have a Shot-Timer?! Yes, you are right but the MaraX has a serial interface!
-As a developer and tinkerer a ready to use serial interface is more interessting then a ready to use Shot-Timer ;)
+Here is my attempt for a Mara X v2 Shot Timer. 
+It uses the Serial interface from the Mara X to visualize the Stats on a 1.3" Display.
 
-If you like my project, please give me a star and if you want, you can also buy me a coffee :-)
+![Display](https://github.com/DiSanzes/Mara-X2-ShotTimer/blob/main/assets/MainView.png?raw=true)
 
-<a href="https://www.buymeacoffee.com/saibotFlow386" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
-
-![Display](https://github.com/SaibotFlow/marax-monitor/blob/main/assets/DisplayInAction.png?raw=true)
+![Display](https://github.com/DiSanzes/Mara-X2-ShotTimer/blob/main/assets/TimerMode.png?raw=true)
  
 # Parts
 
-- Arduino Nano (You can use any other equivalent board)
-- Breadboard
-- Jumper-Wires
-- 0,96" SSD1306 OLED Display
-
-# Structure & Connections
-
-![Fritzing](https://github.com/SaibotFlow/marax-monitor/blob/main/assets/Schema.png?raw=true)
+- WEMOS D1 mini (You can use any other equivalent board)
+- 1,3" SSH1106 OLED Display
 
 # The Interface
 
@@ -28,15 +19,6 @@ The MaraX has a 6-PIN Connector for the serial interface on the bottom. We only 
 
 RX Mara to TX Arudino
 TX Mara to RX Arduino
-You will receive the following data each ~400ms.
-
-![enter image description here](https://github.com/SaibotFlow/marax-monitor/blob/main/assets/Bottom.png?raw=true)
-
-The serial interface itself
-
-![enter image description here](https://github.com/SaibotFlow/marax-monitor/blob/main/assets/Connector.png?raw=true)
-  
-  ***Note**: I also did some tests with a reed sensor and the vibration pump. However its not necessary for the MaraX the interface provides the information about the status of the pump. Maybe I will do another project for a Shot-Timer only for espresso machines with a vibration pump only :-)*
 
 ## The Data
 
@@ -60,17 +42,28 @@ Example Data: **C1.06,116,124,093,0840,1,0\n**
 # Display Wiring
 |Pin Display|Pin Arduino Nano|
 |--|--|
-| VIN | 3,3V or 5V |
+| VIN | 3,3V |
 | GND| GND |
-| SCL| A5 |
-| SDA| A4 |
-
-The reset pin is 0x3D or 0x3C. You can recognize it by the solder joint on the back side
-
-![BackSideDisplay](https://github.com/SaibotFlow/marax-monitor/blob/main/assets/Backside.png?raw=true)
+| SCL| D1 |
+| SDA| D2 |
 
 ## Libaries
  - Wire.h
  - Adafruit_GFX.h
- - Adafruit_SSD1306.h
+ - Adafruit_SH110X.h
  - SoftwareSerial.h
+
+## Fonts used 
+ - GothicA1_Light6pt7b
+ - GothicA1_Light9pt7b
+ - Org_01
+
+## Bootup Logo
+ - Create your Logo with the dimensions: 128x64px 
+ - Convert your image to a binary file for example with this Tool https://javl.github.io/image2cpp/ 
+ - Replace the data for logo_bmp in images.h
+
+
+# Special Thanks goes to: 
+ - SaibotFlow: https://github.com/SaibotFlow/marax-monitor
+ - RedNomis: https://github.com/RedNomis/MaraXObserver
