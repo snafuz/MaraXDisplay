@@ -47,18 +47,23 @@ SoftwareSerial mySerial(D5, D6);
 
 //Internals
 bool gbSim = false;
-bool gbMaraOff = false;
+bool gbMaraOff = true;
 bool gbPumpOn = false;
 bool gbCoffeeMode = false;
 bool gbHeaterOn = false;
+bool gbShowShotTimer = false;
 int giSteamTarget = 199;
 int giSteamCurrent= 0;
 int giCoffeeCurrent= 0;
 int giBoostCountdown = 0;
 int giCurrentSeconds = 0;
-int giLastSeconds = 0;
+int giCurrentShotSeconds = 0;
+int giLastShotSeconds = 0;
 int giTimeThr = 5;
+int giTimeoutThr = 3000;
 long glLastPumpOnMillis;
+long giCurrentOnSeconds = 0;
+long glLastOnMillis = 0;
 long glSerialTimeout = 0;
 char buffer[BUFFER_SIZE];
 int giIndex = 0;
@@ -72,8 +77,14 @@ void showLogo()  {
   delay(250);
   display.clearDisplay();
   display.drawBitmap(0, 0, logo_bmp, logo_width, logo_height, 1);
+  
+  display.setTextColor(SH110X_WHITE);
+  display.setFont(&GothicA1_Light6pt7b);
+  display.setCursor(0, 8);
+  display.print(maraData[0]);
+  display.setFont(&GothicA1_Light6pt7b);
+
   display.display();
-  delay(1000);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -89,8 +100,8 @@ void setup()   {
   mySerial.begin(9600);
   memset(buffer, 0, BUFFER_SIZE);
   mySerial.write(0x11);
-
   showLogo();
+  delay(1000);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -98,14 +109,14 @@ void SetSim() {
 //////////////////////////////////////////////////////////////////////////////////////
   if (gbSim)
   {
-    //C1.06,116,124,093,0840,1,0
-    maraData[0] = String("C1.06");
+    //C1.10,116,124,093,0840,1,0
+    maraData[0] = String("+1.10");
     maraData[1] = String("116");
     maraData[2] = String("124");
     maraData[3] = maraData[3].equals("093")? String("103") : String("093");
     maraData[4] = String("0840");
     maraData[5] = maraData[5].equals("1")? String("0") : String("1");
-    maraData[6] = maraData[6].equals("1")? String("0") : String("1");
+    maraData[6] = String("0");
   }
 }
 
@@ -133,7 +144,7 @@ void getMaraData()
       }
     }
   }
-  if (millis() - glSerialTimeout > 6000)
+  if (millis() - glSerialTimeout > giTimeoutThr)
   {
     gbMaraOff = true;
     SetSim();
@@ -151,7 +162,7 @@ void castMaraData() {
         Example Data: C1.10,116,124,093,0840,1,0\n every ~400-500ms
         Length: 26
         [Pos] [Data] [Describtion]
-        0)      C     Coffee Mode (C) or SteamMode (V)
+        0)      C     Coffee Mode (+) or SteamMode (C) || ToDo: This might be wrong
         -        1.10 Software Version
         1)      116   current steam temperature (Celsisus)
         2)      124   target steam temperature (Celsisus)
@@ -161,10 +172,11 @@ void castMaraData() {
         6)      0     pump on or off
       */
 
-      if (maraData[0].startsWith("C"))
-        gbCoffeeMode = true;
-      else
+      // ToDo: Switched this temporarily To check if the assignment is correct
+      if (maraData[0].startsWith("C")) 
         gbCoffeeMode = false;
+      else
+        gbCoffeeMode = true;
         
       giSteamCurrent = maraData[1].toInt();
       giSteamTarget = maraData[2].toInt();
@@ -219,7 +231,7 @@ void showMain()   {
   display.print(giBoostCountdown);
 
   display.setCursor(106, 8);
-  display.print(giLastSeconds);
+  display.print(giLastShotSeconds);
   display.setFont();
   display.print("s");
 
@@ -272,9 +284,9 @@ void showCounter()   {
   //display.setFont();
 
   //Body
-  if (giCurrentSeconds%3 == 0)
+  if (giCurrentShotSeconds%3 == 0)
     display.drawBitmap(22, 21, drips_1_bmp, drips_width, drips_height, SH110X_WHITE);
-  else if (giCurrentSeconds%3 == 1)
+  else if (giCurrentShotSeconds%3 == 1)
     display.drawBitmap(22, 21, drips_2_bmp, drips_width, drips_height, SH110X_WHITE);
   else
     display.drawBitmap(22, 21, drips_3_bmp, drips_width, drips_height, SH110X_WHITE);
@@ -285,57 +297,69 @@ void showCounter()   {
   display.setTextSize(6);
 
   //Shift Digits to align right
-  if (giCurrentSeconds == 11) {
+  if (giCurrentShotSeconds == 11) {
     display.setCursor(84, 46);
     display.print(1);
     display.setCursor(120, 46);
     display.print(1);
   }
-  else if (giCurrentSeconds < 10) {
+  else if (giCurrentShotSeconds < 10) {
     display.setCursor(96, 46);
-    display.print(giCurrentSeconds);
+    display.print(giCurrentShotSeconds);
   }
-  else if (giCurrentSeconds % 10 == 1){
+  else if (giCurrentShotSeconds % 10 == 1){
     display.setCursor(60, 46);
-    display.print((giCurrentSeconds/10) % 10);
+    display.print((giCurrentShotSeconds/10) % 10);
     display.setCursor(120, 46);
     display.print(1);
   }
-  else if ((giCurrentSeconds/10) % 10 == 1) {
+  else if ((giCurrentShotSeconds/10) % 10 == 1) {
     display.setCursor(84, 46);
     display.print(1);
     display.setCursor(96, 46);
-    display.print(giCurrentSeconds % 10);
+    display.print(giCurrentShotSeconds % 10);
   }
   else {
     display.setCursor(60, 46);
-    display.print(giCurrentSeconds);
+    display.print(giCurrentShotSeconds);
   }
 
-  giLastSeconds = giCurrentSeconds;
+  giLastShotSeconds = giCurrentShotSeconds;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
 void loop() {
 //////////////////////////////////////////////////////////////////////////////////////
+  if (millis() - glLastOnMillis >= 1000)
+  {
+    glLastOnMillis = millis();
+    ++giCurrentOnSeconds;
+  }
 
   getMaraData();
   castMaraData();
-  if (gbPumpOn)
+  if (gbPumpOn || gbShowShotTimer)
   {
     if (millis() - glLastPumpOnMillis >= 1000)
     {
+      gbShowShotTimer = true;
       glLastPumpOnMillis = millis();
       ++giCurrentSeconds;
       if (giCurrentSeconds > 99)
         giCurrentSeconds = 0;
+      if (gbPumpOn)
+      {
+        giCurrentShotSeconds = giCurrentSeconds;
+      }
+      else if (giCurrentSeconds - giCurrentShotSeconds > giTimeThr)
+        gbShowShotTimer = false;
     }
   }
   else
   {
     giCurrentSeconds = 0;
   }
-  if (!gbMaraOff || gbSim)
+  if ((!gbMaraOff || gbSim) && giCurrentOnSeconds > 5)
     updateView();
   else 
     showLogo();
